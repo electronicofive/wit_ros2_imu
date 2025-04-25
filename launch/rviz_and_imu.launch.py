@@ -5,24 +5,23 @@ from launch_ros.actions import Node
 def generate_launch_description():
     rviz_and_imu_node = Node(
         package='wit_ros2_imu',
-        node_executable='wit_ros2_imu',
-        node_name='imu',
-        remappings=[('/wit/imu', '/imu/data')],
-        parameters=[{'port_name': '/dev/ttyUSB0'},
-                    {"baud": 9600}],
+        executable='wit_ros2_imu',
+        name='imu',
+        parameters=[{'port_name': '/dev/imu_usb',
+                    "baud_rate": 9600}],
         output="screen"
 
     )
 
     rviz_display_node = Node(
         package='rviz2',
-        node_executable="rviz2",
+        executable="rviz2",
         output="screen"
     )
 
     return LaunchDescription(
         [
             rviz_and_imu_node,
-            rviz_display_node
+            # rviz_display_node
         ]
     )
