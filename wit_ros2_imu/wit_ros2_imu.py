@@ -130,8 +130,11 @@ def get_quaternion_from_euler(roll, pitch, yaw):
 
 
 class IMUDriverNode(Node):
-    def __init__(self, port_name):
+    def __init__(self):
         super().__init__('imu_driver_node')
+
+        self.declare_parameter('port_name', '/dev/ttyUSB0')
+        self.declare_parameter('baud_rate', 9600)
 
         # 初始化IMU消息
         self.imu_msg = Imu()
@@ -139,18 +142,19 @@ class IMUDriverNode(Node):
 
         # 创建IMU数据发布器
         self.imu_pub = self.create_publisher(Imu, 'imu/data_raw', 10)
-        #self.port = self.get_parameter('port')
-        #self.baud_rate = self.get_parameter('baud')
+        self.port_name = self.get_parameter('port_name').value
+        self.baud_rate = self.get_parameter('baud_rate').value
+        self.get_logger().info(f"Port name: {self.port_name}, Baud rate: {self.baud_rate}")
 
         # 启动IMU驱动线程
-        self.driver_thread = threading.Thread(target=self.driver_loop, args=(port_name,))
+        self.driver_thread = threading.Thread(target=self.driver_loop, args=(self.port_name, self.baud_rate))
         self.driver_thread.start()
 
-    def driver_loop(self, port_name):
+    def driver_loop(self, port_name, baud_rate):
         # 打开串口
 
         try:
-            wt_imu = serial.Serial(port="/dev/ttyUSB0", baudrate=9600, timeout=0.5)
+            wt_imu = serial.Serial(port=port_name, baudrate=baud_rate, timeout=0.5)
             if wt_imu.isOpen():
                 self.get_logger().info("\033[32mSerial port opened successfully...\033[0m")
             else:
@@ -242,7 +246,7 @@ class IMUDriverNode(Node):
 def main():
     # 初始化ROS 2节点
     rclpy.init()
-    node = IMUDriverNode('/dev/ttyUSB0')
+    node = IMUDriverNode()
 
     # 运行ROS 2节点
     try:
