@@ -25,6 +25,38 @@ def hex_to_short(raw_data):
 def check_sum(list_data, check_data):
     return sum(list_data) & 0xff == check_data
 
+def setup_output_rate(serial_port, rate_hz=10):
+    """
+    Configura la tasa de salida (output rate) del IMU enviando el comando adecuado por serial.
+    rate_hz soportados: 1, 2, 5, 10, 20, 50, 100, 200
+    Todos los comandos se envían en hexadecimal (bytes).
+    """
+    print("Configurando tasa de salida del IMU a {} Hz".format(rate_hz))
+    rate_cmds = {
+        1:   bytes.fromhex('FFAA030300'),
+        2:   bytes.fromhex('FFAA030400'),
+        5:   bytes.fromhex('FFAA030500'),
+        10:  bytes.fromhex('FFAA030600'),
+        20:  bytes.fromhex('FFAA030700'),
+        50:  bytes.fromhex('FFAA030800'),
+        100: bytes.fromhex('FFAA030900'),
+        200: bytes.fromhex('FFAA030B00')
+    }
+    if rate_hz not in rate_cmds:
+        raise ValueError("Output rate no soportado")
+
+    # Enviar comando de desbloqueo (unlock) en hexadecimal
+    serial_port.write(bytes.fromhex('FFAA6988B5'))
+    time.sleep(0.1)
+
+    # Enviar comando de configuración de tasa en hexadecimal
+    serial_port.write(rate_cmds[rate_hz])
+    time.sleep(0.1)  # Espera para que el IMU procese el comando
+
+    # Guardar la configuración enviando el comando correspondiente en hexadecimal
+    serial_port.write(bytes.fromhex('FFAA000000'))
+    time.sleep(0.1)
+
 
 def handle_serial_data(raw_data):
     global buff, key, angle_degree, magnetometer, acceleration, angularVelocity, pub_flag
@@ -153,9 +185,12 @@ class IMUDriverNode(Node):
             wt_imu = serial.Serial(port="/dev/ttyUSB0", baudrate=9600, timeout=0.5)
             if wt_imu.isOpen():
                 self.get_logger().info("\033[32mSerial port opened successfully...\033[0m")
+                setup_output_rate(wt_imu, rate_hz=10)
             else:
                 wt_imu.open()
                 self.get_logger().info("\033[32mSerial port opened successfully...\033[0m")
+                # Configura la tasa de salida del IMU a 100Hz
+                setup_output_rate(wt_imu, rate_hz=10)
         except Exception as e:
             print(e)
             self.get_logger().info("\033[31mSerial port opening failure\033[0m")
